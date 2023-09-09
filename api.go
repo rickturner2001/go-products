@@ -70,7 +70,7 @@ func (s *APIServer) handleGetProduct(w http.ResponseWriter, r *http.Request) err
 	}
 
 
-	parsed_id, err := strconv.ParseInt(id, 0, 8)
+	parsedId, err := strconv.ParseInt(id, 0, 8)
 	
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (s *APIServer) handleGetProduct(w http.ResponseWriter, r *http.Request) err
 	
 
 	
-	product, err := s.store.GetProductByID(int(parsed_id))
+	product, err := s.store.GetProductByID(int(parsedId))
 
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (s *APIServer) handleGetProduct(w http.ResponseWriter, r *http.Request) err
 
 
 	if product == nil {
-		return WriteJSON(w, http.StatusNoContent, product)
+		return WriteJSON(w, http.StatusNotFound, ApiError{Error: fmt.Sprintf("Could not find product with id: %d", parsedId)})
 	}
 
 	return WriteJSON(w, http.StatusOK, product)
@@ -109,16 +109,10 @@ func (s *APIServer) handleCreateProduct(w http.ResponseWriter, r *http.Request) 
 
 func (s *APIServer) handleDeleteProduct(w http.ResponseWriter, r *http.Request) error {
 	
-	id := mux.Vars(r)["id"]
+	parsedId, err := extractIdFromRequest(r)	
 
-	parsed_id, err := strconv.ParseInt(id, 0, 8)
-
-	if err != nil {
-		return err
-	}
-
-	err = s.store.DeleteProduct(int(parsed_id)); if err != nil {
-		return err 
+	err = s.store.DeleteProduct(int(parsedId)); if err != nil {
+		return WriteJSON(w, http.StatusNotFound, ApiError{Error: err.Error()})
 	}
 
 	
@@ -126,32 +120,40 @@ func (s *APIServer) handleDeleteProduct(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *APIServer) handleUpdateProduct(w http.ResponseWriter, r *http.Request) error {
-	prod, err := extractProductWithIdFromRequest(r)
 
-	log.Printf("%+v", prod)
+	id, err := extractIdFromRequest(r)
+	
+	if err != nil {
+		return err
+	}
+
+	prod, err := extractProductFromRequest(r)
+
 
 	if err != nil{
 		return err
 	}
 
-	err = s.store.UpdateProduct(prod); if err != nil {
+	err = s.store.UpdateProduct(id, prod); if err != nil {
 		return err
+		// return WriteJSON(w, )
 	}
 
-
-	return nil
+	prod.ID = id
+	return WriteJSON(w, http.StatusOK, prod)
 }
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
+	
 	return json.NewEncoder(w).Encode(v)
 }
 
 type apiFunc func(http.ResponseWriter, *http.Request) error
 
 type ApiError struct {
-	Error string
+	Error string	`json:"error"`
 }
 
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
@@ -202,4 +204,17 @@ func extractProductWithIdFromRequest(r *http.Request) (*Product, error){
 	return product, nil
 	
 
+}
+
+
+func extractIdFromRequest(r *http.Request)(int, error){
+	id := mux.Vars(r)["id"]
+
+	parsedId, err := strconv.ParseInt(id, 0, 8)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return int(parsedId), nil
 }

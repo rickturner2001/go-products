@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
@@ -11,7 +11,7 @@ import (
 type Storage interface {
 	CreateProduct(*Product) error
 	DeleteProduct(int) error
-	UpdateProduct(*Product) error
+	UpdateProduct(int, *Product) error
 	GetProductByID(int) (*Product, error)
 	GetAllProducts()([]*Product, error)
 }
@@ -47,10 +47,9 @@ func (s *PostgresStore) CreateProduct(pr *Product) error {
 	return  res.Error 
 
 }
-func (s *PostgresStore) UpdateProduct(pr *Product) error {
+func (s *PostgresStore) UpdateProduct(id int, pr *Product) error {
 
-	log.Println("Updating id: ", pr.ID)
-	dbProd, err := s.GetProductByID(pr.ID)
+	dbProd, err := s.GetProductByID(id)
 
 	if err != nil {
 		return err
@@ -58,7 +57,7 @@ func (s *PostgresStore) UpdateProduct(pr *Product) error {
 
 
 	if dbProd == nil {
-		return nil
+		return fmt.Errorf("Could not find product with id: %v", id)
 	}
 
 	res := s.db.Model(&dbProd).Where("id = ?", dbProd.ID).Updates(pr)
@@ -69,7 +68,11 @@ func (s *PostgresStore) UpdateProduct(pr *Product) error {
 
 func (s *PostgresStore) DeleteProduct(id int) error {
 	res := s.db.Delete(&Product{},id)
-	log.Printf("%+v", res)
+	
+	if res.RowsAffected == 0{
+		return fmt.Errorf("Could not find product with id: %v", id)
+	}
+
 	return res.Error 
 }
 func (s *PostgresStore) GetProductByID(id int) (*Product, error) {
