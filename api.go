@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 )
 
@@ -25,135 +27,28 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/product", makeHTTPHandleFunc(s.handleProduct))
-	router.HandleFunc("/product/{id}", makeHTTPHandleFunc(s.handleProduct))
+	router.HandleFunc("/product", makeHTTPHandleFunc(s.HandleProduct))
+	router.HandleFunc("/account", makeHTTPHandleFunc(s.HandleAccount))
+
+	router.HandleFunc("/product/{id}", withJWTAuth(makeHTTPHandleFunc(s.HandleProduct), s.store))
+	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.HandleAccount), s.store))
 
 	log.Println("JSON API server running on port: ", s.listenAddr)
 
 	http.ListenAndServe(s.listenAddr, router)
 }
 
-func (s *APIServer) handleProduct(w http.ResponseWriter, r *http.Request) error {
-
-
-	if r.Method == http.MethodGet {
-		return s.handleGetProduct(w, r)
-	}
-
-	if r.Method == http.MethodPost {
-		return s.handleCreateProduct(w, r)
-	}
-
-	if r.Method == http.MethodDelete {
-		return s.handleDeleteProduct(w, r)
-	}
-
-	if r.Method == http.MethodPatch{
-		return s.handleUpdateProduct(w, r)
-	}
-
-	return fmt.Errorf("Method not allowed %s", r.Method)
-}
-
-func (s *APIServer) handleGetProduct(w http.ResponseWriter, r *http.Request) error {
-
-	id := mux.Vars(r)["id"]
-
-	if id == "" {
-		products, err := s.store.GetAllProducts()
-
-		if err != nil {
-			return err
-		}
-
-		return WriteJSON(w, http.StatusOK, products)
-	}
-
-
-	parsedId, err := strconv.ParseInt(id, 0, 8)
-	
-	if err != nil {
-		return err
-	}
-	
-
-	
-	product, err := s.store.GetProductByID(int(parsedId))
-
-	if err != nil {
-		return err
-	}
-
-
-	if product == nil {
-		return WriteJSON(w, http.StatusNotFound, ApiError{Error: fmt.Sprintf("Could not find product with id: %d", parsedId)})
-	}
-
-	return WriteJSON(w, http.StatusOK, product)
-}
-
-func (s *APIServer) handleCreateProduct(w http.ResponseWriter, r *http.Request) error {
-
-	product, err := extractProductFromRequest(r)
-	
-	if err != nil {
-		return err
-	}
-
-	if err = s.store.CreateProduct(product); err != nil {
-		return err
-	}
-
-	return WriteJSON(w, http.StatusOK, product)
-}
-
-func (s *APIServer) handleDeleteProduct(w http.ResponseWriter, r *http.Request) error {
-	
-	parsedId, err := extractIdFromRequest(r)	
-
-	err = s.store.DeleteProduct(int(parsedId)); if err != nil {
-		return WriteJSON(w, http.StatusNotFound, ApiError{Error: err.Error()})
-	}
-
-	
-	return nil
-}
-
-func (s *APIServer) handleUpdateProduct(w http.ResponseWriter, r *http.Request) error {
-
-	id, err := extractIdFromRequest(r)
-	
-	if err != nil {
-		return err
-	}
-
-	prod, err := extractProductFromRequest(r)
-
-
-	if err != nil{
-		return err
-	}
-
-	err = s.store.UpdateProduct(id, prod); if err != nil {
-		return err
-		// return WriteJSON(w, )
-	}
-
-	prod.ID = id
-	return WriteJSON(w, http.StatusOK, prod)
-}
-
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
-	
+
 	return json.NewEncoder(w).Encode(v)
 }
 
 type apiFunc func(http.ResponseWriter, *http.Request) error
 
 type ApiError struct {
-	Error string	`json:"error"`
+	Error string `json:"error"`
 }
 
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
@@ -164,50 +59,76 @@ func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	}
 }
 
-
-func extractProductFromRequest(r *http.Request) (*Product, error){
-	createProductReq := new(CreateProductRequest)
-
-	if err := json.NewDecoder(r.Body).Decode(createProductReq); err != nil {
-		return nil, err
+func CreateJWT(account *Account) (string, error) {
+	claims := &jwt.MapClaims{
+		"expiresAt":         15000,
+		"accountIdentifier": account.AccountIdentifier,
 	}
 
-	parsedPice, err := strconv.Atoi(createProductReq.Price)
-	
-	if err != nil {
-		return nil, err
-	}
+	secret := os.Getenv("JWT_SECRET")
 
-
-	product := NewProduct(createProductReq.Title, float32(parsedPice), createProductReq.Image)
-	return product, nil
-	
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
 }
 
-func extractProductWithIdFromRequest(r *http.Request) (*Product, error){
-	createProductReq := new(CreateProductRequestWithId)
-
-	if err := json.NewDecoder(r.Body).Decode(createProductReq); err != nil {
-		return nil, err
-	}
-
-	parsedPice, err := strconv.Atoi(createProductReq.Price)
-	
-	if err != nil {
-		return nil, err
-	}
-
-	parsedId, err := strconv.Atoi(createProductReq.ID)
-
-	product := NewProductWithId(parsedId, createProductReq.Title, float32(parsedPice), createProductReq.Image)
-
-	return product, nil
-	
-
+func accessDenied(w http.ResponseWriter) {
+	WriteJSON(w, http.StatusForbidden, ApiError{Error: "Access denied"})
 }
 
+func withJWTAuth(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokenString := r.Header.Get("x-jwt-token")
 
-func extractIdFromRequest(r *http.Request)(int, error){
+		token, err := validateJWT(tokenString)
+
+		if err != nil {
+			accessDenied(w)
+			return
+		}
+
+		if !token.Valid {
+			accessDenied(w)
+			return
+		}
+
+		claims := token.Claims.(jwt.MapClaims)
+
+		accountId, err := ExtractIdFromRequest(r)
+
+		if err != nil {
+			accessDenied(w)
+			return
+		}
+
+		account, err := s.GetAccountByID(accountId)
+
+		if err != nil {
+			accessDenied(w)
+			return
+		}
+
+		if account.AccountIdentifier != claims["accountIdentifier"] {
+			accessDenied(w)
+			return
+		}
+
+		handlerFunc(w, r)
+	}
+}
+
+func validateJWT(tokenString string) (*jwt.Token, error) {
+
+	secret := os.Getenv("JWT_SECRET")
+
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected string method: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+}
+
+func ExtractIdFromRequest(r *http.Request) (int, error) {
 	id := mux.Vars(r)["id"]
 
 	parsedId, err := strconv.ParseInt(id, 0, 8)

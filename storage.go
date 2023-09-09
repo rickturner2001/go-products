@@ -13,7 +13,11 @@ type Storage interface {
 	DeleteProduct(int) error
 	UpdateProduct(int, *Product) error
 	GetProductByID(int) (*Product, error)
-	GetAllProducts()([]*Product, error)
+	GetAllProducts() ([]*Product, error)
+
+	CreateAccount(*Account) error
+	GetAccountByID(int) (*Account, error)
+	GetAllAccounts() ([]*Account, error)
 }
 
 type PostgresStore struct {
@@ -31,20 +35,30 @@ func NewPostgresStore() (*PostgresStore, error) {
 }
 
 func (s *PostgresStore) Init() error {
-	return s.createProductTable()
-}
+	err := s.createProductTable()
+	if err != nil {
+		return err
+	}
 
-func (s *PostgresStore) dropProductTable() error {
-	return s.db.Migrator().DropTable(&Product{})
+	err = s.createAccountTable()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *PostgresStore) createProductTable() error {
 	return s.db.AutoMigrate(&Product{})
 }
 
+func (s *PostgresStore) createAccountTable() error {
+	return s.db.AutoMigrate(&Account{})
+}
+
 func (s *PostgresStore) CreateProduct(pr *Product) error {
 	res := s.db.Create(pr)
-	return  res.Error 
+	return res.Error
 
 }
 func (s *PostgresStore) UpdateProduct(id int, pr *Product) error {
@@ -55,31 +69,28 @@ func (s *PostgresStore) UpdateProduct(id int, pr *Product) error {
 		return err
 	}
 
-
 	if dbProd == nil {
 		return fmt.Errorf("Could not find product with id: %v", id)
 	}
 
 	res := s.db.Model(&dbProd).Where("id = ?", dbProd.ID).Updates(pr)
 
-
 	return res.Error
 }
 
 func (s *PostgresStore) DeleteProduct(id int) error {
-	res := s.db.Delete(&Product{},id)
-	
-	if res.RowsAffected == 0{
+	res := s.db.Delete(&Product{}, id)
+
+	if res.RowsAffected == 0 {
 		return fmt.Errorf("Could not find product with id: %v", id)
 	}
 
-	return res.Error 
+	return res.Error
 }
 func (s *PostgresStore) GetProductByID(id int) (*Product, error) {
 	product := &Product{}
 
 	res := s.db.First(product, id)
-
 
 	if res.RowsAffected == 0 {
 		return nil, nil
@@ -88,12 +99,34 @@ func (s *PostgresStore) GetProductByID(id int) (*Product, error) {
 	return product, nil
 }
 
-func (s *PostgresStore) GetAllProducts()([]*Product, error){
-	
+func (s *PostgresStore) GetAllProducts() ([]*Product, error) {
+
 	products := []*Product{}
 
 	res := s.db.Find(&products)
 
-
 	return products, res.Error
+}
+
+func (s *PostgresStore) GetAllAccounts() ([]*Account, error) {
+	accounts := []*Account{}
+	res := s.db.Find(&accounts)
+	return accounts, res.Error
+}
+
+func (s *PostgresStore) GetAccountByID(id int) (*Account, error) {
+	account := &Account{}
+
+	res := s.db.First(account, id)
+
+	if res.RowsAffected == 0 {
+		return nil, nil
+	}
+
+	return account, nil
+}
+
+func (s *PostgresStore) CreateAccount(acc *Account) error {
+	res := s.db.Create(acc)
+	return res.Error
 }
