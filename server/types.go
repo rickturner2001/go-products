@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type CreateProductRequest struct {
@@ -14,6 +15,7 @@ type CreateProductRequest struct {
 
 type CreateAccountRequest struct {
 	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type CreateProductRequestWithId struct {
@@ -26,6 +28,7 @@ type CreateProductRequestWithId struct {
 type Account struct {
 	ID                int        `json:"id" sql:"AUTO_INCREMENT" gorm:"primary_key"`
 	Username          string     `json:"username" gorm:"unique; not null"`
+	EncryptedPassword string 	 `json:"-"`
 	AccountIdentifier string     `json:"accountIdentifier" gorm:"unique; not null"`
 	Products          []*Product `json:"products" gorm:"foreignKey:AccountRefer" `
 }
@@ -39,12 +42,19 @@ type Product struct {
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
-func NewAccount(username string) *Account {
+func NewAccount(username string, password string) (*Account, error) {
+	
+	encpw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+	if err != nil {
+		return nil, err
+	}
 	return &Account{
 		Username:          username,
+		EncryptedPassword: string(encpw),
 		Products:          []*Product{},
 		AccountIdentifier: uuid.New().String(),
-	}
+	}, nil
 }
 
 func NewProduct(title string, price float32, image string) *Product {

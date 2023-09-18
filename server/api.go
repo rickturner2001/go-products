@@ -35,7 +35,10 @@ func (s *APIServer) Run() {
 
 	log.Println("JSON API server running on port: ", s.listenAddr)
 
-	http.ListenAndServe(s.listenAddr, router)
+	err := http.ListenAndServe(s.listenAddr, router)
+	if err != nil {
+		log.Fatalf("Could not listen  on port %s: %v", s.listenAddr, err)
+	}
 }
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
@@ -54,7 +57,11 @@ type ApiError struct {
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
-			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+			err := WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+			if err != nil {
+				log.Printf("could not write json response: %v", err)
+				return
+			}
 		}
 	}
 }
@@ -72,7 +79,10 @@ func CreateJWT(account *Account) (string, error) {
 }
 
 func accessDenied(w http.ResponseWriter) {
-	WriteJSON(w, http.StatusForbidden, ApiError{Error: "Access denied"})
+	err := WriteJSON(w, http.StatusForbidden, ApiError{Error: "Access denied"})
+	if err != nil {
+		return
+	}
 }
 
 func withJWTAuth(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
@@ -122,7 +132,7 @@ func validateJWT(tokenString string) (*jwt.Token, error) {
 
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected string method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("unexpected string method: %v", token.Header["alg"])
 		}
 		return []byte(secret), nil
 	})

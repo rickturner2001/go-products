@@ -106,7 +106,13 @@ func extractAccountFromRequest(r *http.Request) (*Account, error) {
 		return nil, err
 	}
 
-	account := NewAccount(createProductReq.Username)
+	account, err:= NewAccount(createProductReq.Username, createProductReq.Password)
+	
+
+	if err != nil {
+		return nil, err
+	}
+
 	return account, nil
 
 }

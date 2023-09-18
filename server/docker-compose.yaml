@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  product-db:
+    container_name: product-api
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    restart: always
+    env_file:
+      - .env
+
+  server:
+    container_name: product-api-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - product-db

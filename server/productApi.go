@@ -27,7 +27,7 @@ func (s *APIServer) HandleProduct(w http.ResponseWriter, r *http.Request) error 
 		return s.handleUpdateProduct(w, r)
 	}
 
-	return fmt.Errorf("Method not allowed %s", r.Method)
+	return fmt.Errorf("method not allowed %s", r.Method)
 }
 
 func (s *APIServer) handleGetProduct(w http.ResponseWriter, r *http.Request) error {
@@ -82,7 +82,7 @@ func (s *APIServer) handleDeleteProduct(w http.ResponseWriter, r *http.Request) 
 
 	parsedId, err := ExtractIdFromRequest(r)
 
-	err = s.store.DeleteProduct(int(parsedId))
+	err = s.store.DeleteProduct(parsedId)
 	if err != nil {
 		return WriteJSON(w, http.StatusNotFound, ApiError{Error: err.Error()})
 	}
@@ -121,34 +121,13 @@ func extractProductFromRequest(r *http.Request) (*Product, error) {
 		return nil, err
 	}
 
-	parsedPice, err := strconv.Atoi(createProductReq.Price)
+	parsedPrice, err := strconv.Atoi(createProductReq.Price)
 
 	if err != nil {
 		return nil, err
 	}
 
-	product := NewProduct(createProductReq.Title, float32(parsedPice), createProductReq.Image)
-	return product, nil
-
-}
-
-func extractProductWithIdFromRequest(r *http.Request) (*Product, error) {
-	createProductReq := new(CreateProductRequestWithId)
-
-	if err := json.NewDecoder(r.Body).Decode(createProductReq); err != nil {
-		return nil, err
-	}
-
-	parsedPice, err := strconv.Atoi(createProductReq.Price)
-
-	if err != nil {
-		return nil, err
-	}
-
-	parsedId, err := strconv.Atoi(createProductReq.ID)
-
-	product := NewProductWithId(parsedId, createProductReq.Title, float32(parsedPice), createProductReq.Image)
-
+	product := NewProduct(createProductReq.Title, float32(parsedPrice), createProductReq.Image)
 	return product, nil
 
 }

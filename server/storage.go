@@ -25,8 +25,8 @@ type PostgresStore struct {
 }
 
 func NewPostgresStore() (*PostgresStore, error) {
-	dsn := "host=localhost user=postgres port=5432 dbname=postgres password=goproduct sslmode=disable"
-	db, err := gorm.Open(postgres.Open((dsn)))
+	dsn := "host=product-db user=postgres port=5432 dbname=postgres password=goproduct sslmode=disable"
+	db, err := gorm.Open(postgres.Open(dsn))
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (s *PostgresStore) UpdateProduct(id int, pr *Product) error {
 	}
 
 	if dbProd == nil {
-		return fmt.Errorf("Could not find product with id: %v", id)
+		return fmt.Errorf("could not find product with id: %v", id)
 	}
 
 	res := s.db.Model(&dbProd).Where("id = ?", dbProd.ID).Updates(pr)
@@ -82,7 +82,7 @@ func (s *PostgresStore) DeleteProduct(id int) error {
 	res := s.db.Delete(&Product{}, id)
 
 	if res.RowsAffected == 0 {
-		return fmt.Errorf("Could not find product with id: %v", id)
+		return fmt.Errorf("could not find product with id: %v", id)
 	}
 
 	return res.Error
@@ -101,7 +101,7 @@ func (s *PostgresStore) GetProductByID(id int) (*Product, error) {
 
 func (s *PostgresStore) GetAllProducts() ([]*Product, error) {
 
-	products := []*Product{}
+	var products []*Product
 
 	res := s.db.Find(&products)
 
@@ -109,7 +109,7 @@ func (s *PostgresStore) GetAllProducts() ([]*Product, error) {
 }
 
 func (s *PostgresStore) GetAllAccounts() ([]*Account, error) {
-	accounts := []*Account{}
+	var accounts []*Account
 	res := s.db.Find(&accounts)
 	return accounts, res.Error
 }
