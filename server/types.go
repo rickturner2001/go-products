@@ -75,3 +75,9 @@ func NewProductWithId(id int, title string, price float32, image string) *Produc
 		CreatedAt: time.Now().UTC(),
 	}
 }
+
+type EnvVariables struct{
+		DB_PASSWORD string
+		ENVIRONMENT string
+}
+

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.Background?>
+<?import javafx.scene.paint.Color?>
+
+<?import javafx.scene.text.Text?>
+
+
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.collections.FXCollections?>
+<?import goproducts.servicestat.Service?>
+<HBox spacing="10.0" xmlns:fx="http://javafx.com/fxml"
+
+      fx:controller="goproducts.servicestat.Controller">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+    </padding>
+    <VBox styleClass="panel" spacing="20.0" prefWidth="500">
+        <HBox styleClass="panel-heading">
+            <Text styleClass="b">Service status check</Text>
+        </HBox>
+
+
+        <VBox styleClass="panel-body" spacing="20.0">
+            <BorderPane>
+                <bottom>
+                    <Separator style="--fxbackground-color: #3333"/>
+                </bottom>
+                <center>
+                    <HBox alignment="CENTER_LEFT">
+                        <padding>
+                            <Insets bottom="10.0"/>
+                        </padding>
+                        <Label text="Registered services" styleClass="text-mute" HBox.hgrow="ALWAYS"
+                               maxWidth="Infinity"/>
+                        <!--        <Label fx:id="welcomeText"/>-->
+                        <HBox spacing="10.0">
+
+                            <Button text="Check services" onAction="#onCheckServiceClick"/>
+                        </HBox>
+                    </HBox>
+                </center>
+
+            </BorderPane>
+
+
+            <VBox prefWidth="460" fx:id="tableViewContainer"/>
+
+
+        </VBox>
+
+    </VBox>
+
+    <VBox styleClass="panel" prefWidth="500">
+        <HBox styleClass="panel-heading">
+            <Text styleClass="b">Service Registration</Text>
+        </HBox>
+
+        <VBox styleClass="panel-body" spacing="10.0">
+            <HBox fx:id="alertContainer" prefWidth="Infinity"/>
+            <VBox spacing="5.0">
+                <Label text="Name"/>
+                <TextField fx:id="serviceName"/>
+            </VBox>
+            <VBox spacing="5.0">
+                <Label text="Service URL"/>
+                <TextField fx:id="serviceUrl"/>
+            </VBox>
+            <BorderPane>
+                <top>
+                    <Separator style="--fxbackground-color: #3333"/>
+                </top>
+                <center>
+                    <HBox alignment="CENTER_RIGHT">
+                        <Button text="Add service" onAction="#onAddServiceClick"/>
+                    </HBox>
+                </center>
+
+            </BorderPane>
+
+        </VBox>
+
+    </VBox>
+</HBox>

@@ -33,12 +33,34 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/product/{id}", withJWTAuth(makeHTTPHandleFunc(s.HandleProduct), s.store))
 	router.HandleFunc("/account/{id}", withJWTAuth(makeHTTPHandleFunc(s.HandleAccount), s.store))
 
+	router.HandleFunc("/status", makeHTTPHandleFunc(statusHandle))
+
 	log.Println("JSON API server running on port: ", s.listenAddr)
 
 	err := http.ListenAndServe(s.listenAddr, router)
 	if err != nil {
 		log.Fatalf("Could not listen  on port %s: %v", s.listenAddr, err)
 	}
+}
+
+type StatusResponse struct {
+	message string
+	success bool
+}
+
+func getStatusResponse() *StatusResponse {
+	return &StatusResponse{
+		message: "Service is working",
+		success: true,
+	}
+}
+
+func statusHandle(rw http.ResponseWriter, r *http.Request) error {
+	err := WriteJSON(rw, http.StatusOK, getStatusResponse())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {

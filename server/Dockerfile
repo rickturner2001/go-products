@@ -12,7 +12,8 @@ FROM alpine:latest
 WORKDIR /app
 
 COPY --from=builder /app/godocker /app/godocker
+COPY .env /app/.env
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["/app/godocker"]

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
@@ -24,8 +25,29 @@ type PostgresStore struct {
 	db *gorm.DB
 }
 
+
+func mustGetDbDnsString() string {
+	env := MustLoadEnvVariables()
+
+	log.Printf("Loading .env with environment: %s\n", env.ENVIRONMENT)
+	
+	if env.ENVIRONMENT == "production" || env.ENVIRONMENT == "" {
+		return fmt.Sprintf("user=postgres password=%s host=db.mzxiorcfjuyqnjbrikiz.supabase.co port=5432 dbname=postgres sslmode=disable", env.DB_PASSWORD)
+	}else if env.ENVIRONMENT == "development"{
+		return "host=product-db user=postgres port=5432 dbname=postgres password=goproduct sslmode=disable"
+	}
+
+	log.Fatalf("Invalid environment  [production, development]: %s", env.ENVIRONMENT)
+	return ""
+	
+}
+
 func NewPostgresStore() (*PostgresStore, error) {
-	dsn := "host=product-db user=postgres port=5432 dbname=postgres password=goproduct sslmode=disable"
+	
+
+	dsn := mustGetDbDnsString() 
+	
+
 	db, err := gorm.Open(postgres.Open(dsn))
 	if err != nil {
 		return nil, err
