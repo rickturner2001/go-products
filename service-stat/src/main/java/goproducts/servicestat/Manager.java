@@ -30,25 +30,6 @@ public class Manager {
         this.logger.log(Level.INFO, "Successfully initialized Manager");
     }
 
-
-    public static void main(String[] args) {
-
-        Dotenv dotenv = Dotenv.load();
-        ArrayList<Service> services = new ArrayList<>();
-
-        services.add(new Service("product-api", "http://localhost:8080/status"));
-        services.add(new Service("postgres-db", dotenv.get("DATABASE_URL")));
-
-        Manager manager = new Manager(services);
-
-        manager.checkServicesStatus();
-
-        int activeServices = manager.activeServices();
-
-        manager.logger.log(Level.INFO, String.format("There are %d active services\n", activeServices));
-    }
-
-
     public void setServices(ArrayList<Service> services) {
         this.services = services;
     }

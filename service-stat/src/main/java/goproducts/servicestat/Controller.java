@@ -74,7 +74,9 @@ public class Controller {
         var dbServices = database.getServices();
         manager.setServices(dbServices);
 
+
         for (Service service : manager.getServices()) {
+            System.out.printf("Service: %s%n", service.getName());
             activeServices.add(service);
         }
 
@@ -86,14 +88,17 @@ public class Controller {
     public void addServiceToObservable(Service inputService) {
 
 
-        var filteredServices = this.manager.getServices().stream().filter(service -> !Objects.equals(service.getName(), inputService.getName()));
-        if (filteredServices.findAny().isEmpty()) {
-            this.activeServices.add(inputService);
-            this.database.addService(new Service(inputService.getName(), inputService.getUrlString()));
-        } else {
-            System.out.println(String.format("Service with name %s already exists", inputService.getName()));
+        for (Service service : this.manager.getServices()) {
+            if (service.getName().equals(inputService.getName())) {
+                System.out.println(String.format("Service with name %s already exists", inputService.getName()));
+                return;
+            }
         }
 
+
+        this.activeServices.add(inputService);
+        this.manager.addService(inputService);
+        this.database.addService(new Service(inputService.getName(), inputService.getUrlString()));
 
     }
 
@@ -105,7 +110,7 @@ public class Controller {
             alertContainer.getChildren().add(createAlert("Name or url should not be empty"));
         } else {
 
-            Service service = manager.addService(new Service(name, url));
+            Service service = new Service(name, url);
             addServiceToObservable(service);
 
 
